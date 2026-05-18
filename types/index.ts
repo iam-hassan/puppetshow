@@ -12,9 +12,13 @@ export interface Landmark {
 export type GestureType =
   | 'open-palm'
   | 'closed-fist'
-  | 'pinch'
+  | 'one-finger'
+  | 'two-fingers'
+  | 'three-fingers'
+  | 'four-fingers'
   | 'swipe-left'
   | 'swipe-right'
+  | 'swipe-up'
   | 'none';
 
 export interface GestureResult {
@@ -23,12 +27,36 @@ export interface GestureResult {
   position: { x: number; y: number };
 }
 
+export type PuppetAction =
+  | 'idle'
+  | 'jump'
+  | 'bow'
+  | 'theaterBow'
+  | 'shootArrow'
+  | 'celebrate'
+  | 'wave'
+  | 'salute'
+  | 'attack'
+  | 'defend'
+  | 'walkLeft'
+  | 'walkRight'
+  | 'walkCenter'
+  | 'roar'
+  | 'heroicStance'
+  | 'perform'
+  | 'powerStance'
+  | 'magicCast'
+  | 'slam'
+  | 'summon'
+  | 'point';
+
 export interface PuppetState {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
   scale: number;
   emotion: 'neutral' | 'happy' | 'angry' | 'sad' | 'surprised';
   isGrabbing: boolean;
+  action: PuppetAction;
   targetPosition?: { x: number; y: number; z: number };
 }
 
@@ -43,11 +71,12 @@ export interface Prop {
 export interface Character {
   id: string;
   name: string;
-  type: 'king' | 'knight' | 'wizard' | 'dragon' | 'pirate' | 'custom';
+  type: 'king' | 'knight' | 'wizard' | 'dragon' | 'pirate' | 'lion' | 'panda' | 'enemy' | 'custom';
   position: { x: number; y: number; z: number };
   color: string;
   emotion: PuppetState['emotion'];
   dialogue: string;
+  action?: PuppetAction;
 }
 
 export interface DialogueEntry {
@@ -109,8 +138,21 @@ export interface AIResponse {
   };
 }
 
-export interface VoiceCommand {
-  text: string;
-  confidence: number;
-  timestamp: number;
-}
+export type ShowPhase =
+  | 'idle'
+  | 'intro'
+  | 'curtainClose'
+  | 'curtainOpen'
+  | 'performing'
+  | 'battle'
+  | 'ending'
+  | 'finished';
+
+export type BattlePhase = 'idle' | 'intro' | 'active' | 'finisher' | 'victory';
+
+export const GESTURE_ATTACK_MAP: Record<string, { action: PuppetAction; label: string; damage: number }> = {
+  'one-finger': { action: 'attack', label: 'Sword Slash', damage: 1 },
+  'closed-fist': { action: 'heroicStance', label: 'Heavy Strike', damage: 1 },
+  'open-palm': { action: 'defend', label: 'Arcane Shield', damage: 1 },
+  'two-fingers': { action: 'shootArrow', label: 'Magic Bolt', damage: 1 },
+};

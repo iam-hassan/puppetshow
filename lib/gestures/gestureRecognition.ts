@@ -1,11 +1,14 @@
 import type { GestureResult, GestureType, Landmark } from '@/types';
 
-const GESTURE_HISTORY_SIZE = 5;
+const GESTURE_HISTORY_SIZE = 6;
 let gestureHistory: GestureType[] = [];
+
+let lastY: number | null = null;
+let velocityY = 0;
 
 export function classifyGesture(landmarks: Landmark[]): GestureResult {
   if (!landmarks || landmarks.length < 21) {
-    return { type: 'none', confidence: 0, position: { x: 0, y: 0 } };
+    return { type: 'none', confidence: 0, position: { x: 0.5, y: 0.5 } };
   }
 
   const fingers = getFingerStates(landmarks);
@@ -14,21 +17,33 @@ export function classifyGesture(landmarks: Landmark[]): GestureResult {
   let gesture: GestureType = 'none';
   let confidence = 0;
 
-  if (extendedCount >= 4) {
-    gesture = 'open-palm';
-    confidence = 0.9;
-  } else if (extendedCount === 0) {
+  if (extendedCount === 0) {
     gesture = 'closed-fist';
     confidence = 0.9;
-  } else if (isPinching(landmarks)) {
-    gesture = 'pinch';
+  } else if (extendedCount === 1) {
+    gesture = 'one-finger';
     confidence = 0.85;
+  } else if (extendedCount === 2) {
+    gesture = 'two-fingers';
+    confidence = 0.85;
+  } else if (extendedCount === 3) {
+    gesture = 'three-fingers';
+    confidence = 0.85;
+  } else if (extendedCount === 4) {
+    gesture = 'four-fingers';
+    confidence = 0.85;
+  } else {
+    gesture = 'open-palm';
+    confidence = 0.95;
   }
 
   const position = {
     x: landmarks[9].x,
     y: landmarks[9].y,
   };
+
+  velocityY = lastY !== null ? position.y - lastY : 0;
+  lastY = position.y;
 
   const smoothedGesture = smoothGesture(gesture);
 
@@ -39,28 +54,48 @@ export function classifyGesture(landmarks: Landmark[]): GestureResult {
   };
 }
 
+export function getVelocityY(): number {
+  return velocityY;
+}
+
+export function resetVelocity(): void {
+  lastY = null;
+  velocityY = 0;
+}
+
 function getFingerStates(landmarks: Landmark[]): boolean[] {
   const fingerTips = [4, 8, 12, 16, 20];
-  const fingerPips = [3, 6, 10, 14, 18];
+  const fingerMcps = [2, 5, 9, 13, 17];
+  const wrist = landmarks[0];
 
   return fingerTips.map((tipIdx, i) => {
+    const tip = landmarks[tipIdx];
+    const mcp = landmarks[fingerMcps[i]];
+
     if (i === 0) {
-      return landmarks[tipIdx].x < landmarks[2].x;
+      const indexMcp = landmarks[5];
+      const tipToIndex = distance(tip, indexMcp);
+      const handSize = distance(wrist, landmarks[9]);
+      return tipToIndex > handSize * 0.45;
     }
-    return landmarks[tipIdx].y < landmarks[fingerPips[i]].y;
+
+    const tipToWrist = distance(tip, wrist);
+    const mcpToWrist = distance(mcp, wrist);
+
+    if (i === 3) {
+      return tipToWrist > mcpToWrist * 1.5;
+    }
+    if (i === 4) {
+      return tipToWrist > mcpToWrist * 1.3;
+    }
+    return tipToWrist > mcpToWrist * 1.35;
   });
 }
 
-function isPinching(landmarks: Landmark[]): boolean {
-  const thumbTip = landmarks[4];
-  const indexTip = landmarks[8];
-
-  const distance = Math.sqrt(
-    Math.pow(thumbTip.x - indexTip.x, 2) +
-      Math.pow(thumbTip.y - indexTip.y, 2)
+function distance(a: Landmark, b: Landmark): number {
+  return Math.sqrt(
+    Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2) + Math.pow((a.z || 0) - (b.z || 0), 2)
   );
-
-  return distance < 0.05;
 }
 
 function smoothGesture(current: GestureType): GestureType {
@@ -78,35 +113,21 @@ function smoothGesture(current: GestureType): GestureType {
   let maxCount = 0;
   let dominantGesture: GestureType = 'none';
 
-  Object.entries(counts).forEach(([gesture, count]) => {
+  Object.entries(counts).forEach(([g, count]) => {
     if (count > maxCount) {
       maxCount = count;
-      dominantGesture = gesture as GestureType;
+      dominantGesture = g as GestureType;
     }
   });
 
-  if (maxCount >= 3) {
+  if (maxCount >= 4) {
     return dominantGesture;
   }
 
   return current;
 }
 
-export function detectSwipe(
-  currentPos: { x: number; y: number },
-  previousPos: { x: number; y: number } | null
-): 'swipe-left' | 'swipe-right' | null {
-  if (!previousPos) return null;
-
-  const dx = currentPos.x - previousPos.x;
-  const threshold = 0.08;
-
-  if (dx > threshold) return 'swipe-right';
-  if (dx < -threshold) return 'swipe-left';
-
-  return null;
-}
-
 export function resetGestureHistory(): void {
   gestureHistory = [];
+  resetVelocity();
 }

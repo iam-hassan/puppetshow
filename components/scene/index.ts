@@ -5,3 +5,4 @@ export { EnvironmentManager } from './EnvironmentManager';
 export { LightingController } from './LightingController';
 export { ParticleEffects } from './ParticleEffects';
 export { SceneManager } from './SceneManager';
+export { StageFX } from './StageFX';

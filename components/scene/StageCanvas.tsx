@@ -1,148 +1,63 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { Stage, Environment } from '@react-three/drei';
-import { Suspense, useMemo } from 'react';
+import { Suspense } from 'react';
 import { useStore } from '@/store';
 import { StageScene } from './StageScene';
 import { PuppetCharacter } from './PuppetCharacter';
 import { EnvironmentManager } from './EnvironmentManager';
-import { LightingController } from './LightingController';
 import { ParticleEffects } from './ParticleEffects';
+import { StageFX } from './StageFX';
 import { SceneManager } from './SceneManager';
+import { PropsRenderer } from './PropsRenderer';
+import { CinematicCamera } from './CinematicCamera';
+import { BattleSystem } from '@/components/battle/BattleSystem';
 
 export function StageCanvas() {
-  const { scene, puppet } = useStore();
-
-  const cameraPosition = useMemo(() => {
-    switch (scene.environment) {
-      case 'castle':
-        return [0, 2, 8];
-      case 'pirate-ship':
-        return [0, 3, 10];
-      case 'nighttime':
-        return [0, 2, 7];
-      case 'storm':
-        return [0, 3, 9];
-      default:
-        return [0, 2, 8];
-    }
-  }, [scene.environment]);
-
   return (
-    <div className="w-full h-full relative">
-      <Canvas
-        camera={{ position: cameraPosition as [number, number, number], fov: 50 }}
-        style={{ background: getBackgroundGradient(scene.environment) }}
-        shadows
-        dpr={[1, 2]}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-      >
-        <Suspense fallback={null}>
-          <ambientLight intensity={scene.lighting.intensity * 0.3} />
+    <Canvas
+      camera={{ position: [0, 2.5, 8], fov: 50, near: 0.1, far: 100 }}
+      style={{ width: '100%', height: '100%', display: 'block' }}
+      dpr={1}
+    >
+      <color attach="background" args={['#0a0505']} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[3, 8, 4]} intensity={1.5} color="#fff5e6" />
+      <pointLight position={[0, 5, 2]} intensity={2} color="#fbbf24" distance={12} />
+      <pointLight position={[-3, 4, 1]} intensity={0.8} color="#8b5cf6" distance={10} />
+      <pointLight position={[3, 4, 1]} intensity={0.8} color="#ec4899" distance={10} />
+      <spotLight position={[0, 6, 1]} angle={0.5} penumbra={0.5} intensity={1.5} color="#fff5e6" distance={15} />
+      <hemisphereLight args={['#87ceeb', '#2d1b0e', 0.3]} />
 
-          <LightingController />
+      <CinematicCamera />
 
-          <EnvironmentManager />
+      <Suspense fallback={null}>
+        <StageScene />
+        <StageFX />
+        <PropsRenderer />
+        <BattleSystem />
 
-          <StageScene />
+        <PuppetCharacter
+          character={{
+            id: 'player-puppet',
+            name: 'Player',
+            type: 'knight',
+            position: { x: 0, y: 0, z: 3 },
+            color: '#60a5fa',
+            emotion: 'neutral',
+            dialogue: '',
+          }}
+          isPlayer
+        />
 
-          {scene.characters.map((character) => (
-            <PuppetCharacter key={character.id} character={character} />
-          ))}
+        {useStore((s) => s.scene.characters).map((c) => (
+          <PuppetCharacter key={c.id} character={c} />
+        ))}
 
-          <PuppetCharacter
-            character={{
-              id: 'player-puppet',
-              name: 'Player',
-              type: 'knight',
-              position: puppet.position,
-              color: '#60a5fa',
-              emotion: puppet.emotion,
-              dialogue: '',
-            }}
-            isPlayer
-          />
-
-          {scene.props.map((prop) => (
-            <PropObject key={prop.id} prop={prop} />
-          ))}
-
-          <ParticleEffects />
-
-          <SceneManager />
-        </Suspense>
-      </Canvas>
-    </div>
+        <EnvironmentManager />
+        <ParticleEffects />
+        <SceneManager />
+      </Suspense>
+    </Canvas>
   );
-}
-
-function PropObject({ prop }: { prop: { type: string; position: { x: number; y: number; z: number }; scale: number; color: string } }) {
-  return (
-    <group position={[prop.position.x, prop.position.y, prop.position.z]}>
-      {prop.type === 'castle' && (
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[1, 1.5, 1]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {prop.type === 'dragon' && (
-        <mesh castShadow>
-          <sphereGeometry args={[0.5, 16, 16]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {prop.type === 'ship' && (
-        <mesh castShadow>
-          <boxGeometry args={[1.5, 0.3, 0.8]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {prop.type === 'ball' && (
-        <mesh castShadow>
-          <sphereGeometry args={[0.3, 16, 16]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {prop.type === 'sword' && (
-        <mesh castShadow>
-          <boxGeometry args={[0.1, 1.2, 0.1]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {prop.type === 'treasure' && (
-        <mesh castShadow>
-          <boxGeometry args={[0.6, 0.4, 0.4]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-      {!['castle', 'dragon', 'ship', 'ball', 'sword', 'treasure'].includes(prop.type) && (
-        <mesh castShadow>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshStandardMaterial color={prop.color} />
-        </mesh>
-      )}
-    </group>
-  );
-}
-
-function getBackgroundGradient(environment: string): string {
-  switch (environment) {
-    case 'castle':
-      return 'linear-gradient(to bottom, #1a1a2e, #16213e)';
-    case 'pirate-ship':
-      return 'linear-gradient(to bottom, #0f172a, #1e3a5f)';
-    case 'nighttime':
-      return 'linear-gradient(to bottom, #0a0a1a, #1a1a3e)';
-    case 'storm':
-      return 'linear-gradient(to bottom, #1a1a1a, #2d2d3d)';
-    case 'forest':
-      return 'linear-gradient(to bottom, #0a1a0a, #1a2a1a)';
-    case 'desert':
-      return 'linear-gradient(to bottom, #2a1a0a, #3a2a1a)';
-    case 'underwater':
-      return 'linear-gradient(to bottom, #0a1a2a, #0a2a3a)';
-    default:
-      return 'linear-gradient(to bottom, #1a1a2e, #16213e)';
-  }
 }

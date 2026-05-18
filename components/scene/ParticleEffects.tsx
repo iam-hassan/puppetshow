@@ -6,11 +6,11 @@ import * as THREE from 'three';
 import { useStore } from '@/store';
 
 export function ParticleEffects() {
-  const { scene } = useStore();
+  const weather = useStore((s) => s.scene.weather);
   const pointsRef = useRef<THREE.Points>(null);
 
   const geometry = useMemo(() => {
-    const count = getParticleCount(scene.weather);
+    const count = getParticleCount(weather);
     const positions = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
@@ -22,30 +22,30 @@ export function ParticleEffects() {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     return geo;
-  }, [scene.weather]);
+  }, [weather]);
 
   const velocities = useMemo(() => {
-    const count = getParticleCount(scene.weather);
+    const count = getParticleCount(weather);
     const vel = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       vel[i] = Math.random() * 0.5 + 0.2;
     }
     return vel;
-  }, [scene.weather]);
+  }, [weather]);
 
   useFrame((state, delta) => {
-    if (!pointsRef.current) return;
+    if (!pointsRef.current || weather === 'clear') return;
 
     const pos = pointsRef.current.geometry.attributes.position.array as Float32Array;
     const count = pos.length / 3;
 
     for (let i = 0; i < count; i++) {
-      if (scene.weather === 'rain' || scene.weather === 'storm') {
+      if (weather === 'rain' || weather === 'storm') {
         pos[i * 3 + 1] -= velocities[i] * delta * 10;
         if (pos[i * 3 + 1] < -1) {
           pos[i * 3 + 1] = 10;
         }
-      } else if (scene.weather === 'snow') {
+      } else if (weather === 'snow') {
         pos[i * 3 + 1] -= velocities[i] * delta * 2;
         pos[i * 3] += Math.sin(state.clock.elapsedTime + i) * 0.01;
         if (pos[i * 3 + 1] < -1) {
@@ -60,7 +60,7 @@ export function ParticleEffects() {
   });
 
   const getMaterialProps = () => {
-    switch (scene.weather) {
+    switch (weather) {
       case 'rain':
         return { color: '#9ca3af', size: 0.02, opacity: 0.6 };
       case 'storm':

@@ -6,11 +6,11 @@ import * as THREE from 'three';
 import { useStore } from '@/store';
 
 export function EnvironmentManager() {
-  const { scene } = useStore();
+  const environment = useStore((s) => s.scene.environment);
   const groupRef = useRef<THREE.Group>(null);
 
   const environmentElements = useMemo(() => {
-    switch (scene.environment) {
+    switch (environment) {
       case 'castle':
         return <CastleEnvironment />;
       case 'pirate-ship':
@@ -28,7 +28,7 @@ export function EnvironmentManager() {
       default:
         return <CastleEnvironment />;
     }
-  }, [scene.environment]);
+  }, [environment]);
 
   return (
     <group ref={groupRef}>
@@ -45,11 +45,11 @@ function CastleEnvironment() {
         <meshStandardMaterial color="#4a4a5a" />
       </mesh>
 
-      <mesh position={[-4, 1, -4]} castShadow>
+      <mesh position={[-4, 1, -4]}>
         <boxGeometry args={[1.5, 3, 1.5]} />
         <meshStandardMaterial color="#5a5a6a" />
       </mesh>
-      <mesh position={[4, 1, -4]} castShadow>
+      <mesh position={[4, 1, -4]}>
         <boxGeometry args={[1.5, 3, 1.5]} />
         <meshStandardMaterial color="#5a5a6a" />
       </mesh>
@@ -63,7 +63,7 @@ function CastleEnvironment() {
         <meshStandardMaterial color="#8b4513" />
       </mesh>
 
-      <mesh position={[0, 0.5, -4.5]} castShadow>
+      <mesh position={[0, 0.5, -4.5]}>
         <boxGeometry args={[3, 2, 0.3]} />
         <meshStandardMaterial color="#6a6a7a" />
       </mesh>
@@ -88,12 +88,12 @@ function CastleEnvironment() {
 function PirateShipEnvironment() {
   return (
     <group>
-      <mesh position={[0, -0.3, -3]} receiveShadow>
+      <mesh position={[0, -0.3, -3]}>
         <boxGeometry args={[8, 0.5, 4]} />
         <meshStandardMaterial color="#8b6914" />
       </mesh>
 
-      <mesh position={[0, 1, -4]} castShadow>
+      <mesh position={[0, 1, -4]}>
         <boxGeometry args={[0.2, 4, 0.2]} />
         <meshStandardMaterial color="#5a4a2a" />
       </mesh>
@@ -103,11 +103,11 @@ function PirateShipEnvironment() {
         <meshStandardMaterial color="#f5f5dc" />
       </mesh>
 
-      <mesh position={[-3.5, 0.2, -3]} castShadow>
+      <mesh position={[-3.5, 0.2, -3]}>
         <boxGeometry args={[0.3, 1, 3.5]} />
         <meshStandardMaterial color="#6a5a3a" />
       </mesh>
-      <mesh position={[3.5, 0.2, -3]} castShadow>
+      <mesh position={[3.5, 0.2, -3]}>
         <boxGeometry args={[0.3, 1, 3.5]} />
         <meshStandardMaterial color="#6a5a3a" />
       </mesh>
@@ -143,7 +143,7 @@ function NighttimeEnvironment() {
 
   return (
     <group>
-      <mesh position={[0, -0.5, -3]} receiveShadow>
+      <mesh position={[0, -0.5, -3]}>
         <boxGeometry args={[10, 1, 6]} />
         <meshStandardMaterial color="#1a1a2e" />
       </mesh>
@@ -171,7 +171,7 @@ function StormEnvironment() {
 
   return (
     <group>
-      <mesh position={[0, -0.5, -3]} receiveShadow>
+      <mesh position={[0, -0.5, -3]}>
         <boxGeometry args={[10, 1, 6]} />
         <meshStandardMaterial color="#2d2d3d" />
       </mesh>
@@ -194,18 +194,18 @@ function StormEnvironment() {
 function ForestEnvironment() {
   return (
     <group>
-      <mesh position={[0, -0.5, -3]} receiveShadow>
+      <mesh position={[0, -0.5, -3]}>
         <boxGeometry args={[10, 1, 6]} />
         <meshStandardMaterial color="#2d4a2d" />
       </mesh>
 
       {[-3, -1, 1, 3].map((x, i) => (
         <group key={i} position={[x, 0, -4]}>
-          <mesh castShadow>
+          <mesh>
             <cylinderGeometry args={[0.15, 0.2, 2, 8]} />
             <meshStandardMaterial color="#5a3a1a" />
           </mesh>
-          <mesh position={[0, 1.5, 0]} castShadow>
+          <mesh position={[0, 1.5, 0]}>
             <coneGeometry args={[0.8, 2, 8]} />
             <meshStandardMaterial color="#228b22" />
           </mesh>
@@ -218,17 +218,22 @@ function ForestEnvironment() {
 function DesertEnvironment() {
   return (
     <group>
-      <mesh position={[0, -0.5, -3]} receiveShadow>
+      <mesh position={[0, -0.5, -3]}>
         <boxGeometry args={[10, 1, 6]} />
         <meshStandardMaterial color="#d4a574" />
       </mesh>
 
-      <mesh position={[0, -0.3, -3]}>
-        <sphereGeometry args={[5, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      {/* Small sand dunes instead of giant sphere */}
+      <mesh position={[-2, -0.35, -3]}>
+        <sphereGeometry args={[1.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3]} />
+        <meshStandardMaterial color="#c4956a" />
+      </mesh>
+      <mesh position={[2.5, -0.35, -3.5]}>
+        <sphereGeometry args={[1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3]} />
         <meshStandardMaterial color="#c4956a" />
       </mesh>
 
-      <mesh position={[2, 0.5, -3]} castShadow>
+      <mesh position={[2, 0.5, -3]}>
         <cylinderGeometry args={[0.1, 0.1, 1.5, 8]} />
         <meshStandardMaterial color="#8b6914" />
       </mesh>
@@ -239,7 +244,7 @@ function DesertEnvironment() {
 function UnderwaterEnvironment() {
   return (
     <group>
-      <mesh position={[0, -0.5, -3]} receiveShadow>
+      <mesh position={[0, -0.5, -3]}>
         <boxGeometry args={[10, 1, 6]} />
         <meshStandardMaterial color="#1a3a4a" />
       </mesh>

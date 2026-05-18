@@ -4,18 +4,65 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store';
 import { useEffect, useState } from 'react';
 
+function getDialogueStyle(emotion: string) {
+  switch (emotion) {
+    case 'angry':
+      return {
+        bg: 'bg-red-950/80',
+        border: 'border-red-500/30',
+        avatar: 'bg-red-600',
+        nameColor: 'text-red-300',
+        textColor: 'text-red-100/90',
+      };
+    case 'happy':
+      return {
+        bg: 'bg-amber-950/80',
+        border: 'border-amber-500/30',
+        avatar: 'bg-amber-600',
+        nameColor: 'text-amber-300',
+        textColor: 'text-amber-100/90',
+      };
+    case 'surprised':
+      return {
+        bg: 'bg-purple-950/80',
+        border: 'border-purple-500/30',
+        avatar: 'bg-purple-600',
+        nameColor: 'text-purple-300',
+        textColor: 'text-purple-100/90',
+      };
+    case 'sad':
+      return {
+        bg: 'bg-blue-950/80',
+        border: 'border-blue-500/30',
+        avatar: 'bg-blue-600',
+        nameColor: 'text-blue-300',
+        textColor: 'text-blue-100/90',
+      };
+    default:
+      return {
+        bg: 'bg-stone-950/80',
+        border: 'border-amber-500/20',
+        avatar: 'bg-amber-700',
+        nameColor: 'text-amber-200',
+        textColor: 'text-stone-200/90',
+      };
+  }
+}
+
 export function DialogueBox() {
-  const { scene } = useStore();
+  const activeDialogue = useStore((s) => s.scene.activeDialogue);
   const [isVisible, setIsVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
 
   useEffect(() => {
-    if (scene.activeDialogue) {
+    if (activeDialogue) {
       setIsVisible(true);
       setDisplayedText('');
 
       let index = 0;
-      const text = scene.activeDialogue.text;
+      const text = activeDialogue.text;
+      const isAngry = activeDialogue.emotion === 'angry';
+      const speed = isAngry ? 25 : 35;
       const interval = setInterval(() => {
         if (index < text.length) {
           setDisplayedText(text.slice(0, index + 1));
@@ -23,45 +70,47 @@ export function DialogueBox() {
         } else {
           clearInterval(interval);
         }
-      }, 30);
+      }, speed);
 
       const timeout = setTimeout(() => {
         setIsVisible(false);
-      }, 6000);
+      }, 7000);
 
       return () => {
         clearInterval(interval);
         clearTimeout(timeout);
       };
     }
-  }, [scene.activeDialogue]);
+  }, [activeDialogue]);
+
+  if (!activeDialogue) return null;
+
+  const style = getDialogueStyle(activeDialogue.emotion);
 
   return (
     <AnimatePresence>
-      {isVisible && scene.activeDialogue && (
+      {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4"
+          exit={{ opacity: 0, y: 15 }}
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4"
         >
-          <div className="relative bg-gradient-to-r from-purple-900/90 via-purple-800/90 to-purple-900/90 backdrop-blur-md rounded-2xl border border-purple-500/30 shadow-xl shadow-purple-500/20 p-5">
+          <div className={`${style.bg} backdrop-blur-sm rounded-xl border ${style.border} p-4 shadow-2xl`}>
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
-                {scene.activeDialogue.characterName.charAt(0)}
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full ${style.avatar} flex items-center justify-center text-white font-bold text-xs`}>
+                {activeDialogue.characterName.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-purple-200 text-sm font-semibold mb-1">
-                  {scene.activeDialogue.characterName}
+                <p className={`${style.nameColor} text-xs font-semibold mb-0.5 uppercase tracking-wider`}>
+                  {activeDialogue.characterName}
                 </p>
-                <p className="text-white/90 text-base leading-relaxed">
+                <p className={`${style.textColor} text-sm leading-relaxed italic`}>
                   {displayedText}
-                  <span className="animate-pulse">|</span>
+                  <span className="animate-pulse ml-0.5">✦</span>
                 </p>
               </div>
             </div>
-
-            <div className="absolute -top-1 left-8 w-3 h-3 bg-purple-800/90 rotate-45 border-l border-t border-purple-500/30" />
           </div>
         </motion.div>
       )}

@@ -1,61 +1,37 @@
+import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import type { HandLandmarks } from '@/types';
+import { useStore } from '@/store';
 
-declare global {
-  interface Window {
-    Hands: new (config: { locateFile: (file: string) => string }) => HandsInstance;
-    Camera: new (
-      videoElement: HTMLVideoElement,
-      config: { onFrame: () => Promise<void>; width: number; height: number }
-    ) => CameraInstance;
-  }
-}
+let handLandmarker: HandLandmarker | null = null;
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
-interface HandsInstance {
-  setOptions(options: {
-    maxNumHands: number;
-    modelComplexity: number;
-    minDetectionConfidence: number;
-    minTrackingConfidence: number;
-  }): void;
-  onResults(callback: (results: MediaPipeResults) => void): void;
-  send(data: { image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement }): Promise<void>;
-  close(): void;
-}
+async function initHandLandmarker(): Promise<void> {
+  if (handLandmarker) return;
+  if (initPromise) return initPromise;
 
-interface CameraInstance {
-  start(): Promise<void>;
-  stop(): void;
-}
+  initPromise = (async () => {
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    );
 
-interface MediaPipeResults {
-  multiHandLandmarks: number[][][] | null;
-  multiHandedness: { label: string; score: number }[] | null;
-}
-
-let handsInstance: HandsInstance | null = null;
-let cameraInstance: CameraInstance | null = null;
-let scriptsLoaded = false;
-
-async function loadMediaPipeScripts(): Promise<void> {
-  if (scriptsLoaded) return;
-
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load ${src}`));
-      document.head.appendChild(script);
+    handLandmarker = await HandLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      numHands: 1,
+      minHandDetectionConfidence: 0.7,
+      minHandPresenceConfidence: 0.7,
+      minTrackingConfidence: 0.7,
     });
-  };
 
-  await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
-  await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js');
-  scriptsLoaded = true;
+    isInitialized = true;
+  })();
+
+  return initPromise;
 }
 
 export async function initHandTracking(
@@ -63,71 +39,72 @@ export async function initHandTracking(
   onResults: (results: HandLandmarks) => void,
   onError?: (error: Error) => void
 ): Promise<{ stop: () => void }> {
-  try {
-    await loadMediaPipeScripts();
+  let running = true;
+  let frameSkip = 0;
+  let skipFrames = 3;
 
-    if (handsInstance) {
-      handsInstance.close();
+  try {
+    await initHandLandmarker();
+
+    if (!handLandmarker) {
+      throw new Error('HandLandmarker not initialized');
     }
 
-    handsInstance = new window.Hands({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      },
-    });
+    const detectFrame = () => {
+      if (!running || !handLandmarker || !videoElement) return;
 
-    handsInstance.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.5,
-    });
-
-    handsInstance.onResults((results) => {
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
-        const handedness = results.multiHandedness?.[0]?.label || 'Right';
-
-        const formattedLandmarks = landmarks.map((lm) => ({
-          x: lm[0],
-          y: lm[1],
-          z: lm[2],
-        }));
-
-        onResults({
-          landmarks: formattedLandmarks,
-          handedness,
-        });
+      if (videoElement.readyState < 2) {
+        requestAnimationFrame(detectFrame);
+        return;
       }
-    });
 
-    cameraInstance = new window.Camera(videoElement, {
-      onFrame: async () => {
-        if (handsInstance) {
-          await handsInstance.send({ image: videoElement });
+      frameSkip++;
+      const battlePhase = useStore.getState().battlePhase;
+      skipFrames = (battlePhase === 'active' || battlePhase === 'finisher') ? 2 : 4;
+      if (frameSkip <= skipFrames) {
+        requestAnimationFrame(detectFrame);
+        return;
+      }
+      frameSkip = 0;
+
+      try {
+        const results = handLandmarker.detectForVideo(videoElement, performance.now());
+
+        if (results.landmarks && results.landmarks.length > 0) {
+          const landmarks = results.landmarks[0];
+          const handedness = results.handednesses?.[0]?.[0]?.categoryName || 'Right';
+
+          const formattedLandmarks = landmarks.map((lm) => ({
+            x: lm.x,
+            y: lm.y,
+            z: lm.z,
+          }));
+
+          onResults({
+            landmarks: formattedLandmarks,
+            handedness,
+          });
+        } else {
+          onResults({ landmarks: [], handedness: '' });
         }
-      },
-      width: 640,
-      height: 480,
-    });
+      } catch (err) {
+        console.warn('Detection frame error:', err);
+      }
 
-    await cameraInstance.start();
+      requestAnimationFrame(detectFrame);
+    };
+
+    requestAnimationFrame(detectFrame);
   } catch (error) {
     if (onError) {
       onError(error as Error);
     }
+    console.error('Hand tracking init error:', error);
   }
 
   return {
     stop: () => {
-      if (cameraInstance) {
-        cameraInstance.stop();
-        cameraInstance = null;
-      }
-      if (handsInstance) {
-        handsInstance.close();
-        handsInstance = null;
-      }
+      running = false;
     },
   };
 }
@@ -144,10 +121,8 @@ export function getPalmCenter(
   landmarks: { x: number; y: number; z: number }[]
 ): { x: number; y: number } | null {
   if (!landmarks || landmarks.length < 9) return null;
-
   const wrist = landmarks[0];
   const middleMcp = landmarks[9];
-
   return {
     x: (wrist.x + middleMcp.x) / 2,
     y: (wrist.y + middleMcp.y) / 2,

@@ -9,15 +9,15 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ onComplete }: LoadingScreenProps) {
   const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState('Initializing...');
+  const [stage, setStage] = useState('Opening curtains...');
 
   const stages = [
-    'Initializing theater...',
-    'Loading puppet models...',
-    'Setting up stage...',
-    'Connecting AI director...',
-    'Calibrating hand tracking...',
-    'Ready!',
+    'Opening curtains...',
+    'Warming up the puppets...',
+    'Setting the stage...',
+    'AI director ready...',
+    'Stage lights calibrated...',
+    'Showtime!',
   ];
 
   useEffect(() => {
@@ -48,50 +48,50 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-950 via-purple-950 to-gray-950"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-stone-950 via-red-950/30 to-stone-950"
     >
-      <div className="text-center space-y-8">
+      <div className="text-center space-y-6">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="space-y-4"
+          className="space-y-3"
         >
           <div className="relative">
-            <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-purple-500/50">
-              <span className="text-4xl">🎭</span>
+            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-600 to-red-700 flex items-center justify-center shadow-2xl shadow-amber-500/30">
+              <span className="text-3xl">🎭</span>
             </div>
-            <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-purple-500/30 animate-ping" />
+            <div className="absolute inset-0 w-20 h-20 mx-auto rounded-full bg-amber-500/20 animate-ping" />
           </div>
 
-          <h1 className="text-3xl font-bold text-white">
-            AI Virtual Puppet Theater
+          <h1 className="text-2xl font-bold text-amber-100 tracking-wider">
+            Puppet Theater
           </h1>
-          <p className="text-purple-300/80 text-sm">
-            Multimodal Interactive Storytelling
+          <p className="text-amber-300/50 text-xs tracking-widest uppercase">
+            Interactive AI Performance
           </p>
         </motion.div>
 
-        <div className="w-64 mx-auto space-y-3">
-          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+        <div className="w-48 mx-auto space-y-2">
+          <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+              className="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full"
               style={{ width: `${progress}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
-          <p className="text-white/50 text-xs">{stage}</p>
+          <p className="text-white/30 text-[10px]">{stage}</p>
         </div>
 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex items-center justify-center gap-4 text-white/30 text-xs"
+          className="flex items-center justify-center gap-3 text-white/20 text-[10px] tracking-wider"
         >
           <span>Hand Tracking</span>
           <span>•</span>
-          <span>Voice Control</span>
+          <span>Theater Performance</span>
           <span>•</span>
           <span>AI Director</span>
         </motion.div>
