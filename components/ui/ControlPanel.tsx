@@ -356,38 +356,6 @@ export function ControlPanel() {
           Start Show
         </button>
 
-        <div className="bg-black/70 backdrop-blur-md rounded-xl border border-amber-500/30 overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-amber-500/20">
-            <h3 className="text-amber-200/80 text-xs font-semibold uppercase tracking-wider">Describe</h3>
-          </div>
-          <form onSubmit={handleSubmit} className="p-2">
-            <div className="flex gap-1.5">
-              <input
-                ref={inputRef}
-                type="text"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="A dragon appears..."
-                className="flex-1 bg-white/5 border border-amber-500/20 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/25 focus:outline-none focus:border-amber-400/50"
-                disabled={aiProcessing}
-              />
-              <button
-                type="submit"
-                disabled={aiProcessing || !textInput.trim()}
-                className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-200 text-xs disabled:opacity-30 hover:bg-amber-500/30"
-              >
-                ✦
-              </button>
-            </div>
-            {aiProcessing && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <div className="w-3 h-3 border border-amber-400/50 border-t-transparent rounded-full animate-spin" />
-                <span className="text-[10px] text-amber-300/60">Director thinking...</span>
-              </div>
-            )}
-          </form>
-        </div>
-
         <div className="flex gap-1.5">
           <button
             onClick={() => setShowWebcam(!showWebcam)}

@@ -687,11 +687,6 @@ export function PuppetCharacter({ character, isPlayer = false }: PuppetCharacter
         {renderAccessory(character.type)}
       </group>
 
-      {isPlayer && (
-        <Text position={[0, 1.5, 0]} fontSize={0.14} color="#fbbf24" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#000000">
-          {character.name}
-        </Text>
-      )}
       {!isPlayer && (
         <Text position={[0, 1.5, 0]} fontSize={0.12} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#000000">
           {character.name}
