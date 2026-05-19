@@ -56,7 +56,8 @@ export function useFaceTracking(videoRef: React.RefObject<HTMLVideoElement | nul
       }
     ).then((ctrl) => {
       if (ctrl) stopRef.current = ctrl;
-    }).catch(() => {
+    }    ).catch((err) => {
+      console.error('[FaceTracking] Init failed:', err);
       isStartedRef.current = false;
       useStore.getState().setIsFaceTracking(false);
     });
