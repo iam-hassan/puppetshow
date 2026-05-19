@@ -100,10 +100,8 @@ export async function initHandTracking(
 
     requestAnimationFrame(detectFrame);
   } catch (error) {
-    if (onError) {
-      onError(error as Error);
-    }
-    console.error('Hand tracking init error:', error);
+    if (onError) onError(error as Error);
+    throw error;
   }
 
   return {

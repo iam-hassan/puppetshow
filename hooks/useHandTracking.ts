@@ -119,37 +119,57 @@ export function useHandTracking() {
   const startTracking = useCallback(async () => {
     if (!videoRef.current) return;
 
-    try {
-      setError(null);
-      setIsTracking(true);
-      useStore.getState().setIsHandTracking(true);
-      soundEngine.init();
-      soundEngine.startAmbient();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+        }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 320, height: 240 },
-        audio: false,
-      });
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+        setError(null);
+        setIsTracking(true);
+        useStore.getState().setIsHandTracking(true);
+        soundEngine.init();
+        soundEngine.startAmbient();
 
-      stopRef.current = await initHandTracking(
-        videoRef.current,
-        handleResults,
-        (err) => {
-          setError(err.message);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 320, height: 240 },
+          audio: false,
+        });
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        const ctrl = await initHandTracking(
+          videoRef.current,
+          handleResults,
+          () => { }
+        );
+        stopRef.current = ctrl;
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'NotAllowedError') {
+          setError('Camera permission denied. Please allow camera access.');
           setIsTracking(false);
           useStore.getState().setIsHandTracking(false);
+          return;
         }
-      );
-    } catch (err) {
-      const msg = err instanceof DOMException && err.name === 'NotAllowedError'
-        ? 'Camera permission denied. Please allow camera access.'
-        : 'Failed to initialize hand tracking';
-      setError(msg);
-      setIsTracking(false);
-      useStore.getState().setIsHandTracking(false);
+        if (attempt === 2) {
+          setError('Failed to initialize hand tracking');
+          setIsTracking(false);
+          useStore.getState().setIsHandTracking(false);
+        } else {
+          console.warn(`[HandTracking] Start attempt ${attempt + 1} failed, retrying...`);
+          setIsTracking(false);
+          useStore.getState().setIsHandTracking(false);
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+          if (videoRef.current) {
+            videoRef.current.srcObject = null;
+          }
+        }
+      }
     }
   }, [handleResults]);
 
