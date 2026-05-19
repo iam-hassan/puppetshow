@@ -4,6 +4,8 @@ import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store';
 import { useHandTracking } from '@/hooks/useHandTracking';
+import { useFaceTracking } from '@/hooks/useFaceTracking';
+import { DETECTION_METHOD, FACE_LANDMARK_CONNECTIONS } from '@/lib/vision/faceTracking';
 
 const HAND_CONNECTIONS: [number, number][] = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -21,6 +23,7 @@ export function WebcamFeed({ compact = false }: { compact?: boolean }) {
   const puppetAction = useStore((s) => s.puppet.action);
   const battlePhase = useStore((s) => s.battlePhase);
   const { videoRef, isTracking, error, landmarksRef, startTracking, stopTracking } = useHandTracking();
+  const { start: startFaceTracking, stop: stopFaceTracking, resultRef: faceResultRef } = useFaceTracking(videoRef);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const isTrackingRef = useRef(isTracking);
@@ -54,11 +57,12 @@ export function WebcamFeed({ compact = false }: { compact?: boolean }) {
       canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      const w = canvas.width;
+      const h = canvas.height;
+
       const current = landmarksRef.current;
       if (current && current.landmarks.length === 21) {
         const pts = current.landmarks;
-        const w = canvas.width;
-        const h = canvas.height;
 
         HAND_CONNECTIONS.forEach(([i, j]) => {
           if (pts[i] && pts[j]) {
@@ -99,6 +103,68 @@ export function WebcamFeed({ compact = false }: { compact?: boolean }) {
         ctx.fill();
       }
 
+      // Face debug overlay — always visible
+      const face = faceResultRef.current;
+      const isTracking = useStore.getState().isFaceTracking;
+
+      const drawText = (text: string, x: number, y: number, color?: string) => {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.font = '8px monospace';
+        ctx.fillStyle = color || 'rgba(255,255,255,0.7)';
+        ctx.fillText(text, -canvas.width + x, y);
+        ctx.restore();
+      };
+
+      drawText(isTracking ? 'FACE TRACKING' : 'FACE IDLE', 4, 10, isTracking ? '#00ff88' : '#ff4444');
+      drawText(`METHOD: ${DETECTION_METHOD}`, 4, 22);
+
+      if (face) {
+        if (face.faceDetected) {
+          drawText('DETECTED', 4, 34, '#00ff88');
+          drawText(`L:${(face.openness.left * 100).toFixed(0)}% R:${(face.openness.right * 100).toFixed(0)}%`, 4, 46);
+          drawText(`EAR:${(face.earRaw.left * 100).toFixed(0)}/${(face.earRaw.right * 100).toFixed(0)}`, 4, 58);
+          drawText(`gaze:(${face.gazeX.toFixed(2)},${face.gazeY.toFixed(2)})`, 4, 70);
+          drawText(`mouth:${(face.mouthOpenness * 100).toFixed(0)}%`, 4, 82);
+          drawText(`emotion:${face.emotion} ${(face.emotionIntensity * 100).toFixed(0)}%`, 4, 94);
+
+          const pts = face.landmarks;
+          if (pts.length >= 68) {
+            FACE_LANDMARK_CONNECTIONS.forEach(([i, j]) => {
+              if (pts[i] && pts[j]) {
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[j].x, pts[j].y);
+                ctx.strokeStyle = 'rgba(0, 200, 255, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+              }
+            });
+
+            pts.forEach((lm, idx) => {
+              const isEye = (idx >= 36 && idx <= 41) || (idx >= 42 && idx <= 47);
+              const isBrow = idx >= 17 && idx <= 26;
+              const isMouth = idx >= 48 && idx <= 67;
+              const isNose = idx >= 27 && idx <= 35;
+              const radius = isEye ? 3.5 : isMouth ? 3 : isBrow ? 2 : isNose ? 2.5 : 1;
+              ctx.beginPath();
+              ctx.arc(lm.x, lm.y, radius, 0, Math.PI * 2);
+              if (isEye) { ctx.fillStyle = '#00c8ff'; ctx.shadowColor = '#00c8ff'; ctx.shadowBlur = 6; }
+              else if (isMouth) { ctx.fillStyle = '#ff6b9d'; ctx.shadowColor = '#ff6b9d'; ctx.shadowBlur = 4; }
+              else if (isNose) { ctx.fillStyle = '#a78bfa'; ctx.shadowColor = '#a78bfa'; ctx.shadowBlur = 4; }
+              else { ctx.fillStyle = 'rgba(0, 200, 255, 0.6)'; ctx.shadowBlur = 0; }
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            });
+          }
+        } else {
+          drawText('SEARCHING...', 4, 34, '#ffaa00');
+        }
+      } else {
+        drawText('NO RESULTS', 4, 34, '#ff4444');
+      }
+
       animFrameRef.current = requestAnimationFrame(draw);
     };
 
@@ -110,12 +176,16 @@ export function WebcamFeed({ compact = false }: { compact?: boolean }) {
     if ((showWebcam || compact) && !isTracking) {
       startTracking();
     }
+    if ((showWebcam || compact) && isTracking) {
+      startFaceTracking();
+    }
     return () => {
       if (!showWebcam && !compact && isTrackingRef.current) {
         stopTracking();
+        stopFaceTracking();
       }
     };
-  }, [showWebcam, compact]);
+  }, [showWebcam, compact, isTracking]);
 
   // Determined mode: 'hidden' | 'normal' | 'compact' | 'battle'
   const isHidden = !showWebcam && !compact && !isBattle;

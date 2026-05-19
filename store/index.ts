@@ -29,6 +29,18 @@ interface AppState {
   showTitle: string;
   showSubtitle: string;
 
+  isFaceTracking: boolean;
+  faceTrackingOpenness: [number, number];
+  faceGazeX: number;
+  faceGazeY: number;
+  faceEmotion: string;
+  faceEmotionIntensity: number;
+  faceEyebrowRaise: number;
+  faceMouthOpenness: number;
+  faceHeadTilt: number;
+  faceHeadTurn: number;
+  faceHeadNod: number;
+
   setEnvironment: (env: EnvironmentType) => void;
   setWeather: (weather: WeatherType) => void;
   setLighting: (lighting: SceneState['lighting']) => void;
@@ -72,6 +84,14 @@ interface AppState {
   setBattleMessage: (msg: string) => void;
   setIsBattlePaused: (paused: boolean) => void;
   setShowGesturePrompt: (show: boolean) => void;
+
+  setIsFaceTracking: (tracking: boolean) => void;
+  setFaceTrackingOpenness: (left: number, right: number) => void;
+  setFaceGaze: (x: number, y: number) => void;
+  setFaceEmotion: (emotion: string, intensity: number) => void;
+  setFaceEyebrowRaise: (raise: number) => void;
+  setFaceMouthOpenness: (openness: number) => void;
+  setFaceHeadPose: (tilt: number, turn: number, nod: number) => void;
 
   setShowPhase: (phase: ShowPhase) => void;
   setCurtainsOpen: (open: boolean) => void;
@@ -120,6 +140,18 @@ export const useStore = create<AppState>((set) => ({
   curtainsOpen: true,
   showTitle: '',
   showSubtitle: '',
+
+  isFaceTracking: false,
+  faceTrackingOpenness: [1, 1],
+  faceGazeX: 0,
+  faceGazeY: 0,
+  faceEmotion: 'neutral',
+  faceEmotionIntensity: 0,
+  faceEyebrowRaise: 0,
+  faceMouthOpenness: 0,
+  faceHeadTilt: 0,
+  faceHeadTurn: 0,
+  faceHeadNod: 0,
   battlePhase: 'idle',
   requiredGesture: null,
   beastHealth: 5,
@@ -260,6 +292,14 @@ export const useStore = create<AppState>((set) => ({
   setBattleMessage: (msg) => set({ battleMessage: msg }),
   setIsBattlePaused: (paused) => set({ isBattlePaused: paused }),
   setShowGesturePrompt: (show) => set({ showGesturePrompt: show }),
+
+  setIsFaceTracking: (tracking) => set({ isFaceTracking: tracking }),
+  setFaceTrackingOpenness: (left, right) => set({ faceTrackingOpenness: [left, right] }),
+  setFaceGaze: (x, y) => set({ faceGazeX: x, faceGazeY: y }),
+  setFaceEmotion: (emotion, intensity) => set({ faceEmotion: emotion, faceEmotionIntensity: intensity }),
+  setFaceEyebrowRaise: (raise) => set({ faceEyebrowRaise: raise }),
+  setFaceMouthOpenness: (openness) => set({ faceMouthOpenness: openness }),
+  setFaceHeadPose: (tilt, turn, nod) => set({ faceHeadTilt: tilt, faceHeadTurn: turn, faceHeadNod: nod }),
   setShowPhase: (phase) => set({ showPhase: phase }),
   setCurtainsOpen: (open) => set({ curtainsOpen: open }),
   setShowTitle: (title) => set({ showTitle: title }),

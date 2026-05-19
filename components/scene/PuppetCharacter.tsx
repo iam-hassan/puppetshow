@@ -6,6 +6,7 @@ import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/store';
 import { soundEngine } from '@/lib/audio/soundEngine';
+import { EyeController } from './EyeController';
 import type { Character, PuppetAction } from '@/types';
 
 interface PuppetCharacterProps {
@@ -667,8 +668,14 @@ export function PuppetCharacter({ character, isPlayer = false }: PuppetCharacter
           <sphereGeometry args={[0.32, 32, 32]} />
           <meshStandardMaterial color={headColor} roughness={0.35} />
         </mesh>
-        {renderEyes(character.emotion)}
-        {renderMouth(character.emotion)}
+        {isPlayer ? (
+          <EyeController headRef={headRef} />
+        ) : (
+          <>
+            {renderEyes(character.emotion)}
+            {renderMouth(character.emotion)}
+          </>
+        )}
         <mesh position={[-0.18, -0.05, 0.22]}>
           <sphereGeometry args={[0.06, 8, 8]} />
           <meshStandardMaterial color="#ff9999" transparent opacity={0.3} />

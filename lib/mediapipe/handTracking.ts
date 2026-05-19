@@ -1,37 +1,28 @@
-import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { HandLandmarker } from '@mediapipe/tasks-vision';
+import { getWasmFileset } from './wasmResolver';
 import type { HandLandmarks } from '@/types';
 import { useStore } from '@/store';
 
 let handLandmarker: HandLandmarker | null = null;
-let isInitialized = false;
-let initPromise: Promise<void> | null = null;
 
 async function initHandLandmarker(): Promise<void> {
   if (handLandmarker) return;
-  if (initPromise) return initPromise;
 
-  initPromise = (async () => {
-    const vision = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
-    );
+  const vision = await getWasmFileset();
+  if (!vision) throw new Error('WASM runtime not available');
 
-    handLandmarker = await HandLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath:
-          'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO',
-      numHands: 1,
-      minHandDetectionConfidence: 0.7,
-      minHandPresenceConfidence: 0.7,
-      minTrackingConfidence: 0.7,
-    });
-
-    isInitialized = true;
-  })();
-
-  return initPromise;
+  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+      delegate: 'GPU',
+    },
+    runningMode: 'VIDEO',
+    numHands: 1,
+    minHandDetectionConfidence: 0.7,
+    minHandPresenceConfidence: 0.7,
+    minTrackingConfidence: 0.7,
+  });
 }
 
 export async function initHandTracking(
