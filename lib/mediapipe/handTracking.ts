@@ -5,24 +5,37 @@ import { useStore } from '@/store';
 
 let handLandmarker: HandLandmarker | null = null;
 
+async function createWithRetry(vision: Awaited<ReturnType<typeof getWasmFileset>>, retries = 3): Promise<HandLandmarker> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await HandLandmarker.createFromOptions(vision!, {
+        baseOptions: {
+          modelAssetPath:
+            'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+          delegate: 'GPU',
+        },
+        runningMode: 'VIDEO',
+        numHands: 1,
+        minHandDetectionConfidence: 0.7,
+        minHandPresenceConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.warn(`[HandTracking] Model load attempt ${i + 1} failed, retrying in ${(i + 1) * 1500}ms...`);
+      await new Promise((r) => setTimeout(r, (i + 1) * 1500));
+    }
+  }
+  throw new Error('Failed to create HandLandmarker after retries');
+}
+
 async function initHandLandmarker(): Promise<void> {
   if (handLandmarker) return;
 
   const vision = await getWasmFileset();
   if (!vision) throw new Error('WASM runtime not available');
 
-  handLandmarker = await HandLandmarker.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath:
-        'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-      delegate: 'GPU',
-    },
-    runningMode: 'VIDEO',
-    numHands: 1,
-    minHandDetectionConfidence: 0.7,
-    minHandPresenceConfidence: 0.7,
-    minTrackingConfidence: 0.7,
-  });
+  handLandmarker = await createWithRetry(vision);
 }
 
 export async function initHandTracking(
